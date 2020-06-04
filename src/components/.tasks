@@ -1,0 +1,18 @@
+# vim: set fenc=utf-8 ft=dosini:
+
+# define a new task named "file-build"
+[project-run]
+
+# shell command, use quotation for filenames containing spaces
+# check ":AsyncTaskMacro" to see available macros
+command=npm run dev
+
+cwd=$(VIM_FILEDIR)
+
+output=terminal
+
+
+# save file before execute
+save=1
+
+

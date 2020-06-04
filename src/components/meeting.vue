@@ -2,11 +2,7 @@
   <div>
     <el-row>
       <el-col>
-        <video
-          v-bind:autoplay="sharing"
-          width="80%"
-          poster="@/assets/imgs/default.jpg"
-        ></video>
+        <video v-bind:autoplay="sharing" width="80%" poster="@/assets/imgs/default.jpg"></video>
       </el-col>
     </el-row>
     <el-row>
@@ -35,7 +31,7 @@ export default {
   data() {
     return {
       sharing: false,
-      chunks: [],
+      chunks: new Map(),
       recording: ""
     };
   },
@@ -53,6 +49,7 @@ export default {
         });
         return;
       }
+
       try {
         this.stream = await startScreenCapture();
         console.log("stream:", this.stream);
@@ -63,13 +60,33 @@ export default {
         });
         return;
       }
+
       this.stream.addEventListener("inactive", e => {
         console.log("Capture stream inactive - stop recording!");
         this.stopShare(e);
       });
+      this.mediaRecorder = new MediaRecorder(this.stream, {
+        mimeType: "video/webm"
+      });
+      this.mediaRecorder.addEventListener("dataavailable", this.uploadVideo);
+      this.mediaRecorder.start(100);
       this.video = document.querySelector("video");
       this.video.srcObject = this.stream;
       this.sharing = true;
+    },
+    async uploadVideo(event) {
+      if (event.data == null || event.data.size <= 0) {
+        return;
+      }
+      var id = Date.now() ;
+      var data = new FormData();
+      data.append("id", id);
+      data.append("video", event.data);
+      /*this.chunks.set(id, event.data);*/
+      var respose = await fetch("http://127.0.0.1:9020/video", {
+        method: "POST",
+        body: data
+      });
     },
     stopShare(e) {
       this.sharing = false;

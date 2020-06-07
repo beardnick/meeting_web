@@ -7,7 +7,7 @@
     </el-row>
     <el-row>
       <el-button type="primary" round @click="createMeeting">快速会议</el-button>
-      <el-button type="primary" round @click="hello">加入会议</el-button>
+      <el-button type="primary" round @click="joinMeeting">加入会议</el-button>
       <el-button type="primary" round @click="shareScreen">{{sharing ? "正在分享屏幕": "分享屏幕"}}</el-button>
       <el-button type="danger" round @click="stopShare" v-if="sharing">结束分享</el-button>
     </el-row>
@@ -27,6 +27,37 @@ function startScreenCapture() {
   }
 }
 
+function create() {
+  var resp = fetch("http://localhost:9020/meeting/create", {
+    method: "GET"
+  })
+    .then(resp => {
+      return resp.json();
+    })
+    .then(data => {
+      this.meeting = data.meeting;
+      this.$message({
+        message: "新建会议" + this.meeting,
+        type: "success"
+      });
+    });
+}
+function join(meeting) {
+  var executor = resolve => {
+    var resp = fetch(`http://localhost:9020/meeting/join?meeting=${meeting}`, {
+      method: "GET"
+    })
+      .then(resp => {
+        return resp.json();
+      })
+      .then(data => {
+        console.log(data);
+        resolve(data.meeting);
+      });
+  };
+  return new Promise(executor);
+}
+
 export default {
   data() {
     return {
@@ -40,19 +71,22 @@ export default {
       this.$message("hello world");
     },
     createMeeting() {
-      var resp = fetch("http://localhost:9020/meeting/create", {
-        method: "GET"
-      })
-        .then(resp => {
-          return resp.json();
-        })
-        .then(data => {
-          this.meeting = data.meeting;
+      create();
+    },
+    joinMeeting() {
+      this.$prompt("请输入会议号", "提示", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning"
+      }).then(({ value }) => {
+        join(value).then(meeting => {
+          this.meeting = meeting;
           this.$message({
-            message: "新建会议" + this.meeting,
+            message: "加入会议" + this.meeting + "成功",
             type: "success"
           });
         });
+      });
     },
     async shareScreen() {
       this.socket = new WebSocket("ws://localhost:9020/video/ws");

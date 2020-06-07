@@ -6,7 +6,7 @@
       </el-col>
     </el-row>
     <el-row>
-      <el-button type="primary" round @click="hello">快速会议</el-button>
+      <el-button type="primary" round @click="createMeeting">快速会议</el-button>
       <el-button type="primary" round @click="hello">加入会议</el-button>
       <el-button type="primary" round @click="shareScreen">{{sharing ? "正在分享屏幕": "分享屏幕"}}</el-button>
       <el-button type="danger" round @click="stopShare" v-if="sharing">结束分享</el-button>
@@ -39,7 +39,31 @@ export default {
     hello() {
       this.$message("hello world");
     },
+    createMeeting() {
+      var resp = fetch("http://localhost:9020/meeting/create", {
+        method: "GET"
+      })
+        .then(resp => {
+          return resp.json();
+        })
+        .then(data => {
+          this.meeting = data.meeting;
+          this.$message({
+            message: "新建会议" + this.meeting,
+            type: "success"
+          });
+        });
+    },
     async shareScreen() {
+      this.socket = new WebSocket("ws://localhost:9020/video/ws");
+      // Connection opened
+      this.socket.addEventListener("open", function(event) {
+        console.log("websocket connected");
+      });
+      // Listen for messages
+      this.socket.addEventListener("message", function(event) {
+        console.log("Message from server ", event.data);
+      });
       // startScreenCapture会返回一个promise，所以使用await来处理
       // await必须使用在async函数中
       if (this.sharing) {
@@ -78,15 +102,16 @@ export default {
       if (event.data == null || event.data.size <= 0) {
         return;
       }
-      var id = Date.now() ;
+      var id = Date.now();
       var data = new FormData();
       data.append("id", id);
       data.append("video", event.data);
       /*this.chunks.set(id, event.data);*/
-      var respose = await fetch("http://127.0.0.1:9020/video", {
-        method: "POST",
-        body: data
-      });
+      /*var respose = await fetch("http://127.0.0.1:9020/video", {*/
+      /*  method: "POST",*/
+      /*  body: data*/
+      /*});*/
+      this.socket.send(event.data);
     },
     stopShare(e) {
       this.sharing = false;

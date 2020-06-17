@@ -6,7 +6,7 @@
       </el-col>
     </el-row>
     <el-row>
-      <el-button type="primary" round @click="createMeeting">快速会议</el-button>
+      <el-button type="primary" round @click="createMeeting">创建会议</el-button>
       <el-button type="primary" round @click="joinMeeting">加入会议</el-button>
       <el-button type="primary" round @click="shareScreen">{{sharing ? "正在分享屏幕": "分享屏幕"}}</el-button>
       <el-button type="danger" round @click="stopShare" v-if="sharing">结束分享</el-button>

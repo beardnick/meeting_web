@@ -6,8 +6,8 @@
       </el-col>
     </el-row>
     <el-row>
-      <el-button type="primary" round @click="createMeeting">创建会议</el-button>
-      <el-button type="primary" round @click="joinMeeting">加入会议</el-button>
+      <el-button type="primary" round @click="create">创建会议</el-button>
+      <el-button type="primary" round @click="join">加入会议</el-button>
       <el-button type="primary" round @click="shareScreen">{{sharing ? "正在分享屏幕": "分享屏幕"}}</el-button>
       <el-button type="danger" round @click="stopShare" v-if="sharing">结束分享</el-button>
     </el-row>
@@ -15,48 +15,13 @@
 </template>
 
 <script>
-function startScreenCapture() {
-  if (navigator.getDisplayMedia) {
-    return navigator.getDisplayMedia({ video: true });
-  } else if (navigator.mediaDevices.getDisplayMedia) {
-    return navigator.mediaDevices.getDisplayMedia({ video: true });
-  } else {
-    return navigator.mediaDevices.getUserMedia({
-      video: { mediaSource: "screen" }
-    });
-  }
-}
-
-function create() {
-  var resp = fetch("http://localhost:9020/meeting/create", {
-    method: "GET"
-  })
-    .then(resp => {
-      return resp.json();
-    })
-    .then(data => {
-      this.meeting = data.meeting;
-      this.$message({
-        message: "新建会议" + this.meeting,
-        type: "success"
-      });
-    });
-}
-function join(meeting) {
-  var executor = resolve => {
-    var resp = fetch(`http://localhost:9020/meeting/join?meeting=${meeting}`, {
-      method: "GET"
-    })
-      .then(resp => {
-        return resp.json();
-      })
-      .then(data => {
-        console.log(data);
-        resolve(data.meeting);
-      });
-  };
-  return new Promise(executor);
-}
+import { startScreenCapture } from "@/video/webrtc";
+import {
+  createMeeting,
+  endMeeting,
+  joinMeeting,
+  leaveMeeting
+} from "@/api/meeting";
 
 export default {
   data() {
@@ -161,6 +126,42 @@ export default {
         message: "屏幕分享已停止",
         type: "success"
       });
+    },
+    create() {
+      createMeeting({
+        name: "test"
+      }).then(resp => {
+        if (resp.data.code == 7) {
+          this.$message({
+            message: "会议创建失败:" + resp.data.msg,
+            type: "error"
+          });
+          return;
+        }
+        this.meeting = resp.data.data.meeting;
+        this.$message({
+          message: "新建会议:" + this.meeting,
+          type: "success"
+        });
+      });
+    },
+    join(meeting) {
+      var executor = resolve => {
+        var resp = fetch(
+          `http://localhost:9020/meeting/join?meeting=${meeting}`,
+          {
+            method: "GET"
+          }
+        )
+          .then(resp => {
+            return resp.json();
+          })
+          .then(data => {
+            console.log(data);
+            resolve(data.meeting);
+          });
+      };
+      return new Promise(executor);
     }
   }
 };

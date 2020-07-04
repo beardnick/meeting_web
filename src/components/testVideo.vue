@@ -35,38 +35,49 @@ export default {
 
       // get video element
       this.video = document.querySelector("video");
+      this.close = true;
 
       startScreenCapture()
         .then(stream => {
           console.log("stream:", stream);
+          this.stream = stream;
+          this.stream.addEventListener("inactive", e => {
+            console.log("Capture stream inactive - stop recording!");
+            this.stopShare(e);
+          });
+          this.close = false;
           var mediaRecorder = new MediaRecorder(stream, {
             mimeType: 'video/webm;codecs="vp9"'
           });
+          this.socket = new WebSocket("ws://localhost:9020/video/ws");
+          this.socket.addEventListener("open", event => {
+            console.log("websocket connected");
+          });
+          this.socket.addEventListener("message", event => {
+            event.data.arrayBuffer().then(buffer => {
+              this.queue.push(buffer);
+            });
+          });
           mediaRecorder.addEventListener("dataavailable", event => {
-            /*console.log("data:", event.data);*/
-            // sourceBuf.appendBuffer(event.data);
             if (event.data == null || event.data.size <= 10) {
               return;
             }
-            event.data.arrayBuffer().then(buffer => {
-              this.queue.push(buffer);
-              /*this.sourceBuffer.appendBuffer(buffer);*/
-            });
+            this.socket.send(event.data);
           });
+            // 500以下会造成no supported source was found
           mediaRecorder.start(500);
           let mediaSource = this.mediaSource;
           let video = this.video;
           let sourceOpen = this.sourceOpen;
           let sourceClose = this.sourceClose;
-          setTimeout(() => {
-            video.src = URL.createObjectURL(mediaSource);
-            console.log("mediasource:", mediaSource);
-            // Wait for media source to be open
-            mediaSource.addEventListener("sourceopen", sourceOpen);
-            mediaSource.addEventListener("sourceclose", sourceClose);
-          }, 200);
+          video.src = URL.createObjectURL(mediaSource);
+          console.log("mediasource:", mediaSource);
+          // Wait for media source to be open
+          mediaSource.addEventListener("sourceopen", sourceOpen);
+          mediaSource.addEventListener("sourceclose", sourceClose);
         })
         .catch(err => {
+          console.log("err:", err);
           console.log("you cancled");
         });
     },
@@ -86,8 +97,12 @@ export default {
     },
     sourceClose(event) {
       console.log("close event:", event);
+      this.close = true;
     },
     nextChunk() {
+      if (this.close) {
+        return;
+      }
       let sourceBuffer = this.sourceBuffer;
       let queue = this.queue;
       setTimeout(() => {
@@ -99,7 +114,23 @@ export default {
         console.log("next chunk after:", queue[0]);
         sourceBuffer.appendBuffer(this.queue[0]);
         queue.shift();
-      }, 100);
+      }, 10);
+    },
+    stopShare(e) {
+      this.sharing = false;
+      if (this.stream == null) {
+        console.log("screen share already stoped");
+        return;
+      }
+      /*this.mediaRecorder.stop();*/
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+      this.video.srcObject = null;
+      this.close = true;
+      this.$message({
+        message: "屏幕分享已停止",
+        type: "success"
+      });
     }
   }
 };

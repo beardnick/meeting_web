@@ -47,6 +47,7 @@ export default {
           });
           this.close = false;
           var mediaRecorder = new MediaRecorder(stream, {
+              //video/webm;codecs=vp9,opus
             mimeType: 'video/webm;codecs="vp9"'
           });
           this.socket = new WebSocket("ws://localhost:9020/video/ws");
